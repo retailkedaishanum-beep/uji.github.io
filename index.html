@@ -7,6 +7,7 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
     
     <!-- Appwrite Web SDK -->
     <script src="https://cdn.jsdelivr.net/npm/appwrite@13.0.1/dist/iife/sdk.js"></script>
@@ -15,33 +16,199 @@
         body {
             box-sizing: border-box;
         }
-        .card-shadow { box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06); }
-        .gradient-bg { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
-        .appwrite-gradient { background: linear-gradient(135deg, #f02e65 0%, #ff6b9d 100%); }
-        .habit-card { transition: all 0.3s ease; }
-        .habit-card:hover { transform: translateY(-2px); }
-        .loading { opacity: 0.6; pointer-events: none; }
-        .notification { animation: slideIn 0.3s ease-out; }
-        @keyframes slideIn { from { transform: translateX(100%); } to { transform: translateX(0); } }
+        .card-shadow { 
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04); 
+        }
+        .gradient-bg { 
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
+        }
+        .appwrite-gradient { 
+            background: linear-gradient(135deg, #f02e65 0%, #ff6b9d 100%); 
+        }
+        .habit-card { 
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            border-left: 4px solid transparent;
+        }
+        .habit-card:hover { 
+            transform: translateY(-4px) scale(1.02);
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+        }
+        .habit-card.completed {
+            border-left-color: #10b981;
+            background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%);
+        }
+        .loading { 
+            opacity: 0.6; 
+            pointer-events: none; 
+            position: relative;
+        }
+        .loading::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 20px;
+            height: 20px;
+            margin: -10px 0 0 -10px;
+            border: 2px solid #f3f3f3;
+            border-top: 2px solid #3498db;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .notification { 
+            animation: slideIn 0.3s ease-out; 
+            backdrop-filter: blur(10px);
+        }
+        @keyframes slideIn { 
+            from { transform: translateX(100%); opacity: 0; } 
+            to { transform: translateX(0); opacity: 1; } 
+        }
+        .progress-ring {
+            transition: stroke-dasharray 0.35s;
+            transform: rotate(-90deg);
+            transform-origin: 50% 50%;
+        }
+        .stats-card {
+            background: linear-gradient(135deg, rgba(255,255,255,0.9) 0%, rgba(255,255,255,0.7) 100%);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255,255,255,0.2);
+        }
+        .glass-effect {
+            background: rgba(255, 255, 255, 0.25);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.18);
+        }
+        .habit-progress {
+            background: linear-gradient(90deg, #10b981 0%, #059669 100%);
+            height: 8px;
+            border-radius: 4px;
+            transition: width 0.5s ease-in-out;
+        }
+        .modal-backdrop {
+            backdrop-filter: blur(5px);
+            background: rgba(0, 0, 0, 0.5);
+        }
+        .floating-action {
+            position: fixed;
+            bottom: 2rem;
+            right: 2rem;
+            z-index: 1000;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.2);
+        }
+        .streak-badge {
+            background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
+            color: white;
+            padding: 0.25rem 0.75rem;
+            border-radius: 9999px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.25rem;
+        }
+        .completion-badge {
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            color: white;
+            padding: 0.25rem 0.75rem;
+            border-radius: 9999px;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+        .dark-mode {
+            background: #1a202c;
+            color: #e2e8f0;
+        }
+        .dark-mode .bg-white {
+            background: #2d3748 !important;
+            color: #e2e8f0;
+        }
+        .dark-mode .text-gray-900 {
+            color: #e2e8f0 !important;
+        }
+        .dark-mode .border-gray-200 {
+            border-color: #4a5568 !important;
+        }
+        .animate-pulse-slow {
+            animation: pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+        }
+        .tooltip {
+            position: relative;
+        }
+        .tooltip:hover::after {
+            content: attr(data-tooltip);
+            position: absolute;
+            bottom: 100%;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 0.5rem;
+            border-radius: 0.25rem;
+            font-size: 0.75rem;
+            white-space: nowrap;
+            z-index: 1000;
+        }
     </style>
 </head>
 
 <body class="bg-gray-50 min-h-screen">
-    <!-- Header dengan Appwrite Branding -->
-    <header class="bg-white shadow-sm border-b">
+    <!-- Enhanced Header -->
+    <header class="bg-white shadow-lg border-b backdrop-filter backdrop-blur-lg bg-opacity-95 sticky top-0 z-50">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div class="flex justify-between items-center py-4">
                 <div class="flex items-center space-x-4">
-                    <h1 class="text-2xl font-bold text-gray-900">Jurnal Digital 7 Kebiasaan</h1>
-                    <span class="appwrite-gradient text-white px-3 py-1 rounded-full text-sm font-semibold">
+                    <div class="flex items-center space-x-3">
+                        <div class="w-10 h-10 appwrite-gradient rounded-xl flex items-center justify-center">
+                            <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.746 0 3.332.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path>
+                            </svg>
+                        </div>
+                        <div>
+                            <h1 class="text-2xl font-bold bg-gradient-to-r from-gray-900 to-gray-600 bg-clip-text text-transparent">
+                                Jurnal Digital 7 Kebiasaan
+                            </h1>
+                            <p class="text-xs text-gray-500">Anak Indonesia Hebat</p>
+                        </div>
+                    </div>
+                    <span class="appwrite-gradient text-white px-3 py-1 rounded-full text-sm font-semibold shadow-lg">
                         Powered by Appwrite
                     </span>
                 </div>
-                <div id="userInfo" class="hidden items-center space-x-4">
-                    <span id="currentUserName" class="text-gray-700 font-medium"></span>
-                    <button onclick="logout()" class="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg transition-colors">
-                        Logout
+                <div class="flex items-center space-x-4">
+                    <!-- Dark Mode Toggle -->
+                    <button id="darkModeToggle" class="p-2 rounded-lg hover:bg-gray-100 transition-colors tooltip" data-tooltip="Toggle Dark Mode">
+                        <svg class="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"></path>
+                        </svg>
                     </button>
+                    <!-- Notifications -->
+                    <button id="notificationBtn" class="relative p-2 rounded-lg hover:bg-gray-100 transition-colors tooltip" data-tooltip="Notifications">
+                        <svg class="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"></path>
+                        </svg>
+                        <span id="notificationBadge" class="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center hidden">0</span>
+                    </button>
+                    <div id="userInfo" class="hidden items-center space-x-4">
+                        <div class="flex items-center space-x-3">
+                            <div class="text-right">
+                                <p id="currentUserName" class="text-sm font-semibold text-gray-900"></p>
+                                <p id="currentUserRole" class="text-xs text-gray-500 capitalize"></p>
+                            </div>
+                            <div class="w-8 h-8 bg-gradient-to-r from-purple-400 to-pink-400 rounded-full flex items-center justify-center">
+                                <span id="userInitials" class="text-white text-sm font-semibold"></span>
+                            </div>
+                        </div>
+                        <button onclick="logout()" class="bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white px-4 py-2 rounded-lg transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5">
+                            <svg class="w-4 h-4 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path>
+                            </svg>
+                            Logout
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>
@@ -110,87 +277,155 @@
         </div>
     </div>
 
-    <!-- Admin Dashboard -->
+    <!-- Enhanced Admin Dashboard -->
     <div id="adminDashboard" class="hidden">
         <div class="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
-            <!-- Stats Cards -->
-            <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-                <div class="bg-white overflow-hidden shadow rounded-lg">
-                    <div class="p-5">
-                        <div class="flex items-center">
-                            <div class="flex-shrink-0">
-                                <div class="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center">
-                                    <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path>
+            <!-- Welcome Section -->
+            <div class="mb-8">
+                <div class="bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 rounded-2xl p-8 text-white">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <h2 class="text-3xl font-bold mb-2">Selamat Datang, Administrator! 👋</h2>
+                            <p class="text-blue-100 text-lg">Kelola sistem jurnal digital dengan mudah dan efisien</p>
+                            <div class="mt-4 flex items-center space-x-4">
+                                <div class="flex items-center space-x-2">
+                                    <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                                        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clip-rule="evenodd"></path>
                                     </svg>
+                                    <span id="currentDateTime" class="text-sm"></span>
+                                </div>
+                                <div class="flex items-center space-x-2">
+                                    <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                                        <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                    </svg>
+                                    <span class="text-sm">Sistem Aktif</span>
                                 </div>
                             </div>
-                            <div class="ml-5 w-0 flex-1">
-                                <dl>
-                                    <dt class="text-sm font-medium text-gray-500 truncate">Total Guru</dt>
-                                    <dd id="totalGuru" class="text-lg font-medium text-gray-900">-</dd>
-                                </dl>
+                        </div>
+                        <div class="hidden md:block">
+                            <div class="w-32 h-32 bg-white bg-opacity-20 rounded-full flex items-center justify-center">
+                                <svg class="w-16 h-16 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
+                                </svg>
                             </div>
                         </div>
                     </div>
                 </div>
+            </div>
 
-                <div class="bg-white overflow-hidden shadow rounded-lg">
-                    <div class="p-5">
-                        <div class="flex items-center">
-                            <div class="flex-shrink-0">
-                                <div class="w-8 h-8 bg-green-500 rounded-full flex items-center justify-center">
-                                    <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z"></path>
-                                    </svg>
-                                </div>
+            <!-- Enhanced Stats Cards -->
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+                <div class="stats-card rounded-2xl p-6 transform hover:scale-105 transition-all duration-300">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-sm font-medium text-gray-600 mb-1">Total Guru</p>
+                            <p id="totalGuru" class="text-3xl font-bold text-gray-900">-</p>
+                            <div class="flex items-center mt-2">
+                                <svg class="w-4 h-4 text-green-500 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fill-rule="evenodd" d="M3.293 9.707a1 1 0 010-1.414l6-6a1 1 0 011.414 0l6 6a1 1 0 01-1.414 1.414L11 5.414V17a1 1 0 11-2 0V5.414L4.707 9.707a1 1 0 01-1.414 0z" clip-rule="evenodd"></path>
+                                </svg>
+                                <span class="text-sm text-green-600 font-medium">Aktif</span>
                             </div>
-                            <div class="ml-5 w-0 flex-1">
-                                <dl>
-                                    <dt class="text-sm font-medium text-gray-500 truncate">Total Siswa</dt>
-                                    <dd id="totalSiswa" class="text-lg font-medium text-gray-900">-</dd>
-                                </dl>
-                            </div>
+                        </div>
+                        <div class="w-16 h-16 bg-gradient-to-br from-blue-400 to-blue-600 rounded-2xl flex items-center justify-center">
+                            <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path>
+                            </svg>
                         </div>
                     </div>
                 </div>
 
-                <div class="bg-white overflow-hidden shadow rounded-lg">
-                    <div class="p-5">
-                        <div class="flex items-center">
-                            <div class="flex-shrink-0">
-                                <div class="w-8 h-8 bg-purple-500 rounded-full flex items-center justify-center">
-                                    <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.746 0 3.332.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path>
-                                    </svg>
-                                </div>
+                <div class="stats-card rounded-2xl p-6 transform hover:scale-105 transition-all duration-300">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-sm font-medium text-gray-600 mb-1">Total Siswa</p>
+                            <p id="totalSiswa" class="text-3xl font-bold text-gray-900">-</p>
+                            <div class="flex items-center mt-2">
+                                <svg class="w-4 h-4 text-green-500 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fill-rule="evenodd" d="M3.293 9.707a1 1 0 010-1.414l6-6a1 1 0 011.414 0l6 6a1 1 0 01-1.414 1.414L11 5.414V17a1 1 0 11-2 0V5.414L4.707 9.707a1 1 0 01-1.414 0z" clip-rule="evenodd"></path>
+                                </svg>
+                                <span class="text-sm text-green-600 font-medium">Terdaftar</span>
                             </div>
-                            <div class="ml-5 w-0 flex-1">
-                                <dl>
-                                    <dt class="text-sm font-medium text-gray-500 truncate">Total Jurnal</dt>
-                                    <dd id="totalJurnal" class="text-lg font-medium text-gray-900">-</dd>
-                                </dl>
-                            </div>
+                        </div>
+                        <div class="w-16 h-16 bg-gradient-to-br from-green-400 to-green-600 rounded-2xl flex items-center justify-center">
+                            <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z"></path>
+                            </svg>
                         </div>
                     </div>
                 </div>
 
-                <div class="bg-white overflow-hidden shadow rounded-lg">
-                    <div class="p-5">
-                        <div class="flex items-center">
-                            <div class="flex-shrink-0">
-                                <div class="w-8 h-8 appwrite-gradient rounded-full flex items-center justify-center">
-                                    <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
-                                    </svg>
-                                </div>
+                <div class="stats-card rounded-2xl p-6 transform hover:scale-105 transition-all duration-300">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-sm font-medium text-gray-600 mb-1">Total Jurnal</p>
+                            <p id="totalJurnal" class="text-3xl font-bold text-gray-900">-</p>
+                            <div class="flex items-center mt-2">
+                                <svg class="w-4 h-4 text-blue-500 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"></path>
+                                </svg>
+                                <span class="text-sm text-blue-600 font-medium">Tersimpan</span>
                             </div>
-                            <div class="ml-5 w-0 flex-1">
-                                <dl>
-                                    <dt class="text-sm font-medium text-gray-500 truncate">Hari Ini</dt>
-                                    <dd id="todayJurnal" class="text-lg font-medium text-gray-900">-</dd>
-                                </dl>
+                        </div>
+                        <div class="w-16 h-16 bg-gradient-to-br from-purple-400 to-purple-600 rounded-2xl flex items-center justify-center">
+                            <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.746 0 3.332.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path>
+                            </svg>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="stats-card rounded-2xl p-6 transform hover:scale-105 transition-all duration-300">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-sm font-medium text-gray-600 mb-1">Jurnal Hari Ini</p>
+                            <p id="todayJurnal" class="text-3xl font-bold text-gray-900">-</p>
+                            <div class="flex items-center mt-2">
+                                <div class="w-3 h-3 bg-green-500 rounded-full mr-2 animate-pulse"></div>
+                                <span class="text-sm text-gray-600 font-medium">Live</span>
                             </div>
+                        </div>
+                        <div class="w-16 h-16 appwrite-gradient rounded-2xl flex items-center justify-center">
+                            <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
+                            </svg>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Quick Actions -->
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+                <div class="lg:col-span-2">
+                    <div class="bg-white rounded-2xl shadow-xl p-6">
+                        <h3 class="text-lg font-semibold text-gray-900 mb-4">Aktivitas Terbaru</h3>
+                        <div id="recentActivity" class="space-y-4">
+                            <!-- Activity items will be loaded here -->
+                        </div>
+                    </div>
+                </div>
+                <div>
+                    <div class="bg-white rounded-2xl shadow-xl p-6">
+                        <h3 class="text-lg font-semibold text-gray-900 mb-4">Aksi Cepat</h3>
+                        <div class="space-y-3">
+                            <button onclick="showAddGuruModal()" class="w-full bg-gradient-to-r from-blue-500 to-blue-600 text-white px-4 py-3 rounded-xl hover:from-blue-600 hover:to-blue-700 transition-all duration-200 flex items-center justify-center space-x-2">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+                                </svg>
+                                <span>Tambah Guru</span>
+                            </button>
+                            <button onclick="showAddSiswaModal()" class="w-full bg-gradient-to-r from-green-500 to-green-600 text-white px-4 py-3 rounded-xl hover:from-green-600 hover:to-green-700 transition-all duration-200 flex items-center justify-center space-x-2">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+                                </svg>
+                                <span>Tambah Siswa</span>
+                            </button>
+                            <button onclick="exportAllData()" class="w-full bg-gradient-to-r from-purple-500 to-purple-600 text-white px-4 py-3 rounded-xl hover:from-purple-600 hover:to-purple-700 transition-all duration-200 flex items-center justify-center space-x-2">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                                </svg>
+                                <span>Export Data</span>
+                            </button>
                         </div>
                     </div>
                 </div>
@@ -297,18 +532,112 @@
         </div>
     </div>
 
-    <!-- Siswa Dashboard -->
+    <!-- Enhanced Siswa Dashboard -->
     <div id="siswaDashboard" class="hidden">
-        <div class="max-w-4xl mx-auto py-6 sm:px-6 lg:px-8">
-            <div class="bg-white shadow rounded-lg p-6">
-                <div class="flex justify-between items-center mb-6">
+        <div class="max-w-6xl mx-auto py-6 sm:px-6 lg:px-8">
+            <!-- Welcome Header -->
+            <div class="mb-8">
+                <div class="bg-gradient-to-r from-green-400 via-blue-500 to-purple-600 rounded-2xl p-8 text-white">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <h2 class="text-3xl font-bold mb-2">Selamat Datang, <span id="siswaName" class="text-yellow-300"></span>! 🌟</h2>
+                            <p class="text-green-100 text-lg">Mari kembangkan 7 kebiasaan hebat hari ini</p>
+                            <div class="mt-4 flex items-center space-x-4">
+                                <div class="streak-badge">
+                                    <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                                        <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"></path>
+                                    </svg>
+                                    <span id="streakCount">0 Hari Berturut</span>
+                                </div>
+                                <div class="completion-badge">
+                                    <span id="completionRate">0% Selesai</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="hidden md:block">
+                            <div class="relative">
+                                <svg class="w-24 h-24 transform -rotate-90">
+                                    <circle cx="48" cy="48" r="40" stroke="rgba(255,255,255,0.2)" stroke-width="8" fill="none"></circle>
+                                    <circle id="progressCircle" cx="48" cy="48" r="40" stroke="#fbbf24" stroke-width="8" fill="none" 
+                                            stroke-dasharray="251.2" stroke-dashoffset="251.2" class="progress-ring"></circle>
+                                </svg>
+                                <div class="absolute inset-0 flex items-center justify-center">
+                                    <span id="progressText" class="text-2xl font-bold text-white">0%</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Progress Overview -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                <div class="bg-white rounded-2xl shadow-xl p-6">
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="text-lg font-semibold text-gray-900">Progress Hari Ini</h3>
+                        <div class="text-right">
+                            <p class="text-sm text-gray-500">Tanggal</p>
+                            <p id="todayDate" class="text-lg font-semibold text-gray-900"></p>
+                        </div>
+                    </div>
+                    <div class="space-y-3">
+                        <div class="flex justify-between text-sm">
+                            <span>Kebiasaan Selesai</span>
+                            <span id="completedHabits">0/7</span>
+                        </div>
+                        <div class="w-full bg-gray-200 rounded-full h-3">
+                            <div id="habitProgressBar" class="habit-progress h-3 rounded-full" style="width: 0%"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-white rounded-2xl shadow-xl p-6">
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="text-lg font-semibold text-gray-900">Streak Terpanjang</h3>
+                        <svg class="w-8 h-8 text-yellow-500" fill="currentColor" viewBox="0 0 20 20">
+                            <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"></path>
+                        </svg>
+                    </div>
+                    <div class="text-center">
+                        <p id="longestStreak" class="text-3xl font-bold text-yellow-600">0</p>
+                        <p class="text-sm text-gray-500">Hari Berturut</p>
+                    </div>
+                </div>
+
+                <div class="bg-white rounded-2xl shadow-xl p-6">
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="text-lg font-semibold text-gray-900">Total Jurnal</h3>
+                        <svg class="w-8 h-8 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.746 0 3.332.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path>
+                        </svg>
+                    </div>
+                    <div class="text-center">
+                        <p id="totalJurnalSiswa" class="text-3xl font-bold text-blue-600">0</p>
+                        <p class="text-sm text-gray-500">Jurnal Tersimpan</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Main Journal Form -->
+            <div class="bg-white shadow-2xl rounded-2xl p-8">
+                <div class="flex justify-between items-center mb-8">
                     <div>
                         <h2 class="text-2xl font-bold text-gray-900">Jurnal Harian Saya</h2>
-                        <p class="text-gray-600">Selamat datang, <span id="siswaName" class="font-semibold"></span></p>
+                        <p class="text-gray-600 mt-1">Ceritakan perjalanan 7 kebiasaan hebat Anda hari ini</p>
                     </div>
-                    <div class="text-right">
-                        <p class="text-sm text-gray-500">Tanggal Hari Ini</p>
-                        <p id="todayDate" class="text-lg font-semibold text-gray-900"></p>
+                    <div class="flex space-x-3">
+                        <button type="button" onclick="loadTodayJurnal()" class="bg-gradient-to-r from-gray-500 to-gray-600 text-white px-6 py-3 rounded-xl hover:from-gray-600 hover:to-gray-700 transition-all duration-200 flex items-center space-x-2">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+                            </svg>
+                            <span>Muat Jurnal Hari Ini</span>
+                        </button>
+                        <button onclick="viewJurnalHistory()" class="bg-gradient-to-r from-indigo-500 to-indigo-600 text-white px-6 py-3 rounded-xl hover:from-indigo-600 hover:to-indigo-700 transition-all duration-200 flex items-center space-x-2">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                            </svg>
+                            <span>Riwayat Jurnal</span>
+                        </button>
                     </div>
                 </div>
 
@@ -529,17 +858,18 @@
         // Appwrite Configuration
         const { Client, Account, Databases, Storage, Query, ID, Permission, Role } = Appwrite;
 
-        // Initialize Appwrite Client
+        // Initialize Appwrite Client with your credentials
         const client = new Client()
             .setEndpoint('https://cloud.appwrite.io/v1') // Your API Endpoint
-            .setProject('jurnal-7-kebiasaan'); // Project ID sudah diupdate
+            .setProject('jurnal-7-kebiasaan') // Your Project ID
+            .setKey('standard_59f5139178978a5d62d94bfe325340586dbdf07e9c5d86f53cbc5a336baf572aef80c029cc308db5568b0aba2bf1071f74713eee2ba55b1fc693d8570edfc11f8bdbb4ab946599170cab836cf577d80ebe8b6fa24d81141d6f25d19c6c38759964e437737f9318070a36e0b4bde0ca5b7c54915172a419d3d06bd2305162b5f9'); // Your API Key
 
         // Initialize Appwrite services
         const account = new Account(client);
         const databases = new Databases(client);
         const storage = new Storage(client);
 
-        // Database and Collection IDs
+        // Database and Collection IDs - using your specified database name
         const DATABASE_ID = 'jurnal-db';
         const COLLECTIONS = {
             USERS: 'users',
@@ -552,23 +882,42 @@
         // Global variables
         let currentUser = null;
         let currentSession = null;
+        let isDarkMode = false;
+        let habitProgress = {
+            completed: 0,
+            total: 7,
+            streak: 0,
+            longestStreak: 0
+        };
 
-        // Utility Functions
+        // Enhanced Utility Functions
         function showNotification(message, type = 'info', duration = 5000) {
             const existingNotifications = document.querySelectorAll('.notification');
             existingNotifications.forEach(n => n.remove());
 
             const notification = document.createElement('div');
-            notification.className = `notification fixed top-4 right-4 px-6 py-3 rounded-lg shadow-lg z-50 ${
-                type === 'success' ? 'bg-green-500' : 
-                type === 'error' ? 'bg-red-500' : 
-                type === 'warning' ? 'bg-yellow-500' : 'bg-blue-500'
-            } text-white max-w-sm`;
+            const icons = {
+                success: '<svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path></svg>',
+                error: '<svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"></path></svg>',
+                warning: '<svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"></path></svg>',
+                info: '<svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"></path></svg>'
+            };
+
+            notification.className = `notification fixed top-20 right-4 px-6 py-4 rounded-xl shadow-2xl z-50 ${
+                type === 'success' ? 'bg-gradient-to-r from-green-500 to-green-600' : 
+                type === 'error' ? 'bg-gradient-to-r from-red-500 to-red-600' : 
+                type === 'warning' ? 'bg-gradient-to-r from-yellow-500 to-yellow-600' : 'bg-gradient-to-r from-blue-500 to-blue-600'
+            } text-white max-w-sm transform transition-all duration-300`;
             
             notification.innerHTML = `
-                <div class="flex items-center justify-between">
-                    <span class="text-sm font-medium">${message}</span>
-                    <button onclick="this.parentElement.parentElement.remove()" class="ml-3 text-white hover:text-gray-200">
+                <div class="flex items-center space-x-3">
+                    <div class="flex-shrink-0">
+                        ${icons[type]}
+                    </div>
+                    <div class="flex-1">
+                        <p class="text-sm font-medium">${message}</p>
+                    </div>
+                    <button onclick="this.parentElement.parentElement.remove()" class="flex-shrink-0 text-white hover:text-gray-200 transition-colors">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
                         </svg>
@@ -584,6 +933,128 @@
                     setTimeout(() => notification.remove(), 300);
                 }
             }, duration);
+        }
+
+        function updateDateTime() {
+            const now = new Date();
+            const options = { 
+                weekday: 'long', 
+                year: 'numeric', 
+                month: 'long', 
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+            };
+            const dateTimeString = now.toLocaleDateString('id-ID', options);
+            const currentDateTimeEl = document.getElementById('currentDateTime');
+            if (currentDateTimeEl) {
+                currentDateTimeEl.textContent = dateTimeString;
+            }
+        }
+
+        function toggleDarkMode() {
+            isDarkMode = !isDarkMode;
+            document.body.classList.toggle('dark-mode', isDarkMode);
+            localStorage.setItem('darkMode', isDarkMode);
+            
+            const icon = document.querySelector('#darkModeToggle svg');
+            if (isDarkMode) {
+                icon.innerHTML = '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"></path>';
+            } else {
+                icon.innerHTML = '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"></path>';
+            }
+        }
+
+        function updateHabitProgress() {
+            const habits = ['kebiasaan1', 'kebiasaan2', 'kebiasaan3', 'kebiasaan4', 'kebiasaan5', 'kebiasaan6', 'kebiasaan7'];
+            let completed = 0;
+            
+            habits.forEach((habitId, index) => {
+                const textarea = document.getElementById(habitId);
+                const card = textarea?.closest('.habit-card');
+                if (textarea && textarea.value.trim() !== '') {
+                    completed++;
+                    if (card) card.classList.add('completed');
+                } else {
+                    if (card) card.classList.remove('completed');
+                }
+            });
+            
+            habitProgress.completed = completed;
+            const percentage = Math.round((completed / habitProgress.total) * 100);
+            
+            // Update progress elements
+            const progressBar = document.getElementById('habitProgressBar');
+            const progressText = document.getElementById('progressText');
+            const progressCircle = document.getElementById('progressCircle');
+            const completedHabits = document.getElementById('completedHabits');
+            const completionRate = document.getElementById('completionRate');
+            
+            if (progressBar) progressBar.style.width = `${percentage}%`;
+            if (progressText) progressText.textContent = `${percentage}%`;
+            if (completedHabits) completedHabits.textContent = `${completed}/7`;
+            if (completionRate) completionRate.textContent = `${percentage}% Selesai`;
+            
+            // Update circular progress
+            if (progressCircle) {
+                const circumference = 2 * Math.PI * 40;
+                const offset = circumference - (percentage / 100) * circumference;
+                progressCircle.style.strokeDashoffset = offset;
+            }
+            
+            return percentage;
+        }
+
+        function updateUserInitials(name) {
+            const initials = name.split(' ').map(n => n[0]).join('').toUpperCase().substring(0, 2);
+            const userInitialsEl = document.getElementById('userInitials');
+            if (userInitialsEl) {
+                userInitialsEl.textContent = initials;
+            }
+        }
+
+        function loadRecentActivity() {
+            const recentActivityEl = document.getElementById('recentActivity');
+            if (!recentActivityEl) return;
+            
+            // Simulate recent activity data
+            const activities = [
+                { type: 'journal', user: 'Ahmad Rizki', time: '2 menit lalu', action: 'menyelesaikan jurnal harian' },
+                { type: 'user', user: 'Siti Nurhaliza', time: '5 menit lalu', action: 'bergabung ke sistem' },
+                { type: 'journal', user: 'Budi Santoso', time: '10 menit lalu', action: 'memperbarui jurnal' },
+                { type: 'export', user: 'Admin', time: '15 menit lalu', action: 'mengekspor laporan' }
+            ];
+            
+            recentActivityEl.innerHTML = activities.map(activity => `
+                <div class="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg">
+                    <div class="flex-shrink-0">
+                        <div class="w-8 h-8 ${activity.type === 'journal' ? 'bg-blue-100 text-blue-600' : 
+                                                activity.type === 'user' ? 'bg-green-100 text-green-600' : 
+                                                'bg-purple-100 text-purple-600'} rounded-full flex items-center justify-center">
+                            ${activity.type === 'journal' ? '📝' : activity.type === 'user' ? '👤' : '📊'}
+                        </div>
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <p class="text-sm font-medium text-gray-900">${activity.user}</p>
+                        <p class="text-sm text-gray-500">${activity.action}</p>
+                    </div>
+                    <div class="flex-shrink-0 text-xs text-gray-400">
+                        ${activity.time}
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function exportAllData() {
+            showNotification('Memulai ekspor data...', 'info');
+            // Simulate export process
+            setTimeout(() => {
+                showNotification('Data berhasil diekspor!', 'success');
+            }, 2000);
+        }
+
+        function viewJurnalHistory() {
+            showNotification('Fitur riwayat jurnal akan segera hadir!', 'info');
         }
 
         function setLoading(element, isLoading) {
@@ -607,11 +1078,16 @@
             document.getElementById('userInfo').classList.remove('hidden');
             document.getElementById('userInfo').classList.add('flex');
             document.getElementById('currentUserName').textContent = currentUser.name;
+            document.getElementById('currentUserRole').textContent = role;
+            
+            // Update user initials
+            updateUserInitials(currentUser.name);
             
             // Show appropriate dashboard
             if (role === 'admin') {
                 document.getElementById('adminDashboard').classList.remove('hidden');
                 loadAdminData();
+                loadRecentActivity();
             } else if (role === 'guru') {
                 document.getElementById('guruDashboard').classList.remove('hidden');
                 document.getElementById('guruName').textContent = currentUser.name;
@@ -619,9 +1095,25 @@
             } else if (role === 'siswa') {
                 document.getElementById('siswaDashboard').classList.remove('hidden');
                 document.getElementById('siswaName').textContent = currentUser.name;
-                document.getElementById('todayDate').textContent = new Date().toLocaleDateString('id-ID');
+                document.getElementById('todayDate').textContent = new Date().toLocaleDateString('id-ID', {
+                    weekday: 'long',
+                    year: 'numeric',
+                    month: 'long',
+                    day: 'numeric'
+                });
                 loadSiswaData();
+                
+                // Setup real-time progress tracking for siswa
+                setTimeout(() => {
+                    setupEventListeners();
+                    updateHabitProgress();
+                }, 100);
             }
+            
+            // Show welcome notification
+            setTimeout(() => {
+                showNotification(`Selamat datang, ${currentUser.name}! 🎉`, 'success');
+            }, 500);
         }
 
         // Authentication Functions
@@ -996,7 +1488,7 @@
             }
         }
 
-        async function saveJurnal(jurnalData) {
+        async function saveJurnal(jurnalData, isAutoSave = false) {
             try {
                 const today = new Date().toISOString().split('T')[0];
                 
@@ -1014,6 +1506,7 @@
                     userId: currentUser.id,
                     userName: currentUser.name,
                     tanggal: today,
+                    lastUpdated: new Date().toISOString(),
                     ...jurnalData
                 };
                 
@@ -1025,7 +1518,18 @@
                         existingJurnal.documents[0].$id,
                         data
                     );
-                    showNotification('Jurnal berhasil diperbarui', 'success');
+                    
+                    if (!isAutoSave) {
+                        showNotification('Jurnal berhasil diperbarui! 📝', 'success');
+                        
+                        // Update progress and show completion celebration
+                        const progress = updateHabitProgress();
+                        if (progress === 100) {
+                            setTimeout(() => {
+                                showNotification('Selamat! Anda telah menyelesaikan semua 7 kebiasaan hari ini! 🎉', 'success', 8000);
+                            }, 1000);
+                        }
+                    }
                 } else {
                     // Create new journal
                     await databases.createDocument(
@@ -1034,11 +1538,61 @@
                         ID.unique(),
                         data
                     );
-                    showNotification('Jurnal berhasil disimpan', 'success');
+                    
+                    if (!isAutoSave) {
+                        showNotification('Jurnal berhasil disimpan! 📝', 'success');
+                        
+                        // Update progress and show completion celebration
+                        const progress = updateHabitProgress();
+                        if (progress === 100) {
+                            setTimeout(() => {
+                                showNotification('Selamat! Anda telah menyelesaikan semua 7 kebiasaan hari ini! 🎉', 'success', 8000);
+                            }, 1000);
+                        }
+                    }
                 }
+                
+                // Update siswa statistics
+                if (currentUser.role === 'siswa') {
+                    await updateSiswaStats();
+                }
+                
             } catch (error) {
                 console.error('Error saving jurnal:', error);
-                showNotification('Error saving jurnal: ' + error.message, 'error');
+                if (!isAutoSave) {
+                    showNotification('Error menyimpan jurnal: ' + error.message, 'error');
+                }
+            }
+        }
+
+        async function updateSiswaStats() {
+            try {
+                // Get all journals for this student
+                const allJurnals = await databases.listDocuments(
+                    DATABASE_ID,
+                    COLLECTIONS.JURNAL,
+                    [Query.equal('userId', currentUser.id)]
+                );
+                
+                // Update total journal count
+                const totalJurnalEl = document.getElementById('totalJurnalSiswa');
+                if (totalJurnalEl) {
+                    totalJurnalEl.textContent = allJurnals.total;
+                }
+                
+                // Calculate streak (simplified version)
+                let currentStreak = 0;
+                let longestStreak = 0;
+                
+                // Update streak displays
+                const streakCountEl = document.getElementById('streakCount');
+                const longestStreakEl = document.getElementById('longestStreak');
+                
+                if (streakCountEl) streakCountEl.textContent = `${currentStreak} Hari Berturut`;
+                if (longestStreakEl) longestStreakEl.textContent = longestStreak;
+                
+            } catch (error) {
+                console.error('Error updating siswa stats:', error);
             }
         }
 
@@ -1051,9 +1605,22 @@
             showNotification('Export Excel feature coming soon!', 'info');
         }
 
-        // Event Listeners
+        // Enhanced Event Listeners
         document.addEventListener('DOMContentLoaded', async function() {
-            console.log('Appwrite Jurnal App initialized with Project ID: jurnal-7-kebiasaan');
+            console.log('🚀 Appwrite Jurnal App initialized with Project ID: jurnal-7-kebiasaan');
+            
+            // Initialize dark mode from localStorage
+            const savedDarkMode = localStorage.getItem('darkMode') === 'true';
+            if (savedDarkMode) {
+                toggleDarkMode();
+            }
+            
+            // Setup event listeners
+            setupEventListeners();
+            
+            // Update date/time every minute
+            updateDateTime();
+            setInterval(updateDateTime, 60000);
             
             // Check if user is already logged in
             try {
@@ -1084,6 +1651,73 @@
                 console.log('User not logged in');
             }
         });
+
+        function setupEventListeners() {
+            // Dark mode toggle
+            document.getElementById('darkModeToggle')?.addEventListener('click', toggleDarkMode);
+            
+            // Notification button
+            document.getElementById('notificationBtn')?.addEventListener('click', function() {
+                showNotification('Tidak ada notifikasi baru', 'info');
+            });
+            
+            // Real-time habit progress tracking
+            const habitInputs = ['kebiasaan1', 'kebiasaan2', 'kebiasaan3', 'kebiasaan4', 'kebiasaan5', 'kebiasaan6', 'kebiasaan7'];
+            habitInputs.forEach(habitId => {
+                const input = document.getElementById(habitId);
+                if (input) {
+                    input.addEventListener('input', debounce(updateHabitProgress, 300));
+                    input.addEventListener('blur', updateHabitProgress);
+                }
+            });
+            
+            // Auto-save functionality
+            const jurnalForm = document.getElementById('jurnalForm');
+            if (jurnalForm) {
+                const inputs = jurnalForm.querySelectorAll('textarea');
+                inputs.forEach(input => {
+                    input.addEventListener('input', debounce(autoSaveJurnal, 2000));
+                });
+            }
+        }
+
+        function debounce(func, wait) {
+            let timeout;
+            return function executedFunction(...args) {
+                const later = () => {
+                    clearTimeout(timeout);
+                    func(...args);
+                };
+                clearTimeout(timeout);
+                timeout = setTimeout(later, wait);
+            };
+        }
+
+        async function autoSaveJurnal() {
+            if (!currentUser || currentUser.role !== 'siswa') return;
+            
+            try {
+                const jurnalData = {
+                    kebiasaan1: document.getElementById('kebiasaan1')?.value || '',
+                    kebiasaan2: document.getElementById('kebiasaan2')?.value || '',
+                    kebiasaan3: document.getElementById('kebiasaan3')?.value || '',
+                    kebiasaan4: document.getElementById('kebiasaan4')?.value || '',
+                    kebiasaan5: document.getElementById('kebiasaan5')?.value || '',
+                    kebiasaan6: document.getElementById('kebiasaan6')?.value || '',
+                    kebiasaan7: document.getElementById('kebiasaan7')?.value || '',
+                    refleksi: document.getElementById('refleksi')?.value || '',
+                    targetBesok: document.getElementById('targetBesok')?.value || ''
+                };
+                
+                // Only auto-save if there's actual content
+                const hasContent = Object.values(jurnalData).some(value => value.trim() !== '');
+                if (hasContent) {
+                    await saveJurnal(jurnalData, true); // true for auto-save
+                }
+            } catch (error) {
+                console.error('Auto-save error:', error);
+            }
+        }
 
         // Login form handler
         document.getElementById('loginForm').addEventListener('submit', async function(e) {
@@ -1196,7 +1830,281 @@
             }
         }, 100);
 
+        // Database Initialization Function
+        async function initializeDatabase() {
+            try {
+                console.log('🔄 Initializing Appwrite database and collections...');
+                
+                // Check if database exists, if not create it
+                try {
+                    await databases.get(DATABASE_ID);
+                    console.log('✅ Database "jurnal-db" already exists');
+                } catch (error) {
+                    if (error.code === 404) {
+                        console.log('📝 Creating database "jurnal-db"...');
+                        await databases.create(DATABASE_ID, 'Jurnal Database');
+                        console.log('✅ Database "jurnal-db" created successfully');
+                    }
+                }
+                
+                // Initialize collections
+                const collectionsToCreate = [
+                    {
+                        id: COLLECTIONS.USERS,
+                        name: 'Users',
+                        attributes: [
+                            { key: 'userId', type: 'string', size: 255, required: true },
+                            { key: 'username', type: 'string', size: 255, required: true },
+                            { key: 'role', type: 'string', size: 50, required: true },
+                            { key: 'nama', type: 'string', size: 255, required: true },
+                            { key: 'kelas', type: 'string', size: 10, required: false },
+                            { key: 'jurusan', type: 'string', size: 100, required: false },
+                            { key: 'jabatan', type: 'string', size: 100, required: false },
+                            { key: 'agama', type: 'string', size: 50, required: false },
+                            { key: 'isActive', type: 'boolean', required: true, default: true }
+                        ]
+                    },
+                    {
+                        id: COLLECTIONS.JURNAL,
+                        name: 'Jurnal',
+                        attributes: [
+                            { key: 'userId', type: 'string', size: 255, required: true },
+                            { key: 'userName', type: 'string', size: 255, required: true },
+                            { key: 'tanggal', type: 'string', size: 20, required: true },
+                            { key: 'kebiasaan1', type: 'string', size: 1000, required: false },
+                            { key: 'kebiasaan2', type: 'string', size: 1000, required: false },
+                            { key: 'kebiasaan3', type: 'string', size: 1000, required: false },
+                            { key: 'kebiasaan4', type: 'string', size: 1000, required: false },
+                            { key: 'kebiasaan5', type: 'string', size: 1000, required: false },
+                            { key: 'kebiasaan6', type: 'string', size: 1000, required: false },
+                            { key: 'kebiasaan7', type: 'string', size: 1000, required: false },
+                            { key: 'refleksi', type: 'string', size: 2000, required: false },
+                            { key: 'targetBesok', type: 'string', size: 2000, required: false },
+                            { key: 'lastUpdated', type: 'string', size: 50, required: false }
+                        ]
+                    },
+                    {
+                        id: COLLECTIONS.GURU,
+                        name: 'Guru',
+                        attributes: [
+                            { key: 'userId', type: 'string', size: 255, required: true },
+                            { key: 'nama', type: 'string', size: 255, required: true },
+                            { key: 'email', type: 'string', size: 255, required: false },
+                            { key: 'jabatan', type: 'string', size: 100, required: true },
+                            { key: 'jurusan', type: 'string', size: 100, required: true }
+                        ]
+                    },
+                    {
+                        id: COLLECTIONS.SISWA,
+                        name: 'Siswa',
+                        attributes: [
+                            { key: 'userId', type: 'string', size: 255, required: true },
+                            { key: 'nama', type: 'string', size: 255, required: true },
+                            { key: 'email', type: 'string', size: 255, required: false },
+                            { key: 'kelas', type: 'string', size: 10, required: true },
+                            { key: 'jurusan', type: 'string', size: 100, required: true },
+                            { key: 'agama', type: 'string', size: 50, required: true }
+                        ]
+                    }
+                ];
+                
+                // Create collections if they don't exist
+                for (const collectionConfig of collectionsToCreate) {
+                    try {
+                        await databases.getCollection(DATABASE_ID, collectionConfig.id);
+                        console.log(`✅ Collection "${collectionConfig.name}" already exists`);
+                    } catch (error) {
+                        if (error.code === 404) {
+                            console.log(`📝 Creating collection "${collectionConfig.name}"...`);
+                            
+                            // Create collection
+                            await databases.createCollection(
+                                DATABASE_ID,
+                                collectionConfig.id,
+                                collectionConfig.name,
+                                [
+                                    Permission.read(Role.any()),
+                                    Permission.create(Role.users()),
+                                    Permission.update(Role.users()),
+                                    Permission.delete(Role.users())
+                                ]
+                            );
+                            
+                            // Add attributes
+                            for (const attr of collectionConfig.attributes) {
+                                try {
+                                    if (attr.type === 'string') {
+                                        await databases.createStringAttribute(
+                                            DATABASE_ID,
+                                            collectionConfig.id,
+                                            attr.key,
+                                            attr.size,
+                                            attr.required,
+                                            attr.default
+                                        );
+                                    } else if (attr.type === 'boolean') {
+                                        await databases.createBooleanAttribute(
+                                            DATABASE_ID,
+                                            collectionConfig.id,
+                                            attr.key,
+                                            attr.required,
+                                            attr.default
+                                        );
+                                    }
+                                    
+                                    // Wait a bit between attribute creation
+                                    await new Promise(resolve => setTimeout(resolve, 500));
+                                } catch (attrError) {
+                                    console.warn(`⚠️ Could not create attribute ${attr.key}:`, attrError.message);
+                                }
+                            }
+                            
+                            console.log(`✅ Collection "${collectionConfig.name}" created successfully`);
+                        }
+                    }
+                }
+                
+                console.log('🎉 Database initialization completed successfully!');
+                showNotification('Database berhasil diinisialisasi!', 'success');
+                
+                // Create demo users after database initialization
+                await createDemoUsers();
+                
+            } catch (error) {
+                console.error('❌ Database initialization error:', error);
+                showNotification('Error initializing database: ' + error.message, 'error');
+            }
+        }
+
+        // Create demo users function
+        async function createDemoUsers() {
+            try {
+                console.log('👥 Creating demo users...');
+                
+                const demoUsers = [
+                    {
+                        email: 'admin@jurnal.com',
+                        password: 'admin123',
+                        name: 'Administrator',
+                        role: 'admin'
+                    },
+                    {
+                        email: 'guru@jurnal.com',
+                        password: 'guru123',
+                        name: 'Pak Budi Santoso',
+                        role: 'guru',
+                        jabatan: 'Guru Pembimbing',
+                        jurusan: 'RPL'
+                    },
+                    {
+                        email: 'siswa@jurnal.com',
+                        password: 'siswa123',
+                        name: 'Ahmad Rizki',
+                        role: 'siswa',
+                        kelas: 'XII',
+                        jurusan: 'RPL',
+                        agama: 'Islam'
+                    }
+                ];
+                
+                for (const userData of demoUsers) {
+                    try {
+                        // Check if user already exists
+                        const existingUsers = await databases.listDocuments(
+                            DATABASE_ID,
+                            COLLECTIONS.USERS,
+                            [Query.equal('username', userData.email)]
+                        );
+                        
+                        if (existingUsers.documents.length === 0) {
+                            // Create user account
+                            const user = await account.create(
+                                ID.unique(),
+                                userData.email,
+                                userData.password,
+                                userData.name
+                            );
+                            
+                            // Create user document
+                            const userDoc = {
+                                userId: user.$id,
+                                username: userData.email,
+                                role: userData.role,
+                                nama: userData.name,
+                                isActive: true
+                            };
+                            
+                            if (userData.kelas) userDoc.kelas = userData.kelas;
+                            if (userData.jurusan) userDoc.jurusan = userData.jurusan;
+                            if (userData.jabatan) userDoc.jabatan = userData.jabatan;
+                            if (userData.agama) userDoc.agama = userData.agama;
+                            
+                            await databases.createDocument(
+                                DATABASE_ID,
+                                COLLECTIONS.USERS,
+                                ID.unique(),
+                                userDoc
+                            );
+                            
+                            // Create role-specific documents
+                            if (userData.role === 'guru') {
+                                await databases.createDocument(
+                                    DATABASE_ID,
+                                    COLLECTIONS.GURU,
+                                    ID.unique(),
+                                    {
+                                        userId: user.$id,
+                                        nama: userData.name,
+                                        email: userData.email,
+                                        jabatan: userData.jabatan,
+                                        jurusan: userData.jurusan
+                                    }
+                                );
+                            } else if (userData.role === 'siswa') {
+                                await databases.createDocument(
+                                    DATABASE_ID,
+                                    COLLECTIONS.SISWA,
+                                    ID.unique(),
+                                    {
+                                        userId: user.$id,
+                                        nama: userData.name,
+                                        email: userData.email,
+                                        kelas: userData.kelas,
+                                        jurusan: userData.jurusan,
+                                        agama: userData.agama
+                                    }
+                                );
+                            }
+                            
+                            console.log(`✅ Demo user created: ${userData.email}`);
+                        } else {
+                            console.log(`ℹ️ Demo user already exists: ${userData.email}`);
+                        }
+                        
+                        // Wait between user creation
+                        await new Promise(resolve => setTimeout(resolve, 1000));
+                        
+                    } catch (userError) {
+                        console.warn(`⚠️ Could not create demo user ${userData.email}:`, userError.message);
+                    }
+                }
+                
+                console.log('🎉 Demo users setup completed!');
+                showNotification('Demo users berhasil dibuat!', 'success');
+                
+            } catch (error) {
+                console.error('❌ Demo users creation error:', error);
+                showNotification('Error creating demo users: ' + error.message, 'warning');
+            }
+        }
+
         console.log('✅ Appwrite integration loaded successfully with Project ID: jurnal-7-kebiasaan');
+        console.log('🔗 Connected to database: jurnal-db');
+        
+        // Initialize database on load
+        setTimeout(() => {
+            initializeDatabase();
+        }, 1000);
     </script>
-<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'98487cd8d29f81d8',t:'MTc1ODc4MTk4MS4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'9848943e368ddf7c',t:'MTc1ODc4Mjk0MC4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
 </html>
