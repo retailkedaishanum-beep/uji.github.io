@@ -1,0 +1,1202 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Jurnal Digital 7 Kebiasaan - Appwrite</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    
+    <!-- Appwrite Web SDK -->
+    <script src="https://cdn.jsdelivr.net/npm/appwrite@13.0.1/dist/iife/sdk.js"></script>
+    
+    <style>
+        body {
+            box-sizing: border-box;
+        }
+        .card-shadow { box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06); }
+        .gradient-bg { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
+        .appwrite-gradient { background: linear-gradient(135deg, #f02e65 0%, #ff6b9d 100%); }
+        .habit-card { transition: all 0.3s ease; }
+        .habit-card:hover { transform: translateY(-2px); }
+        .loading { opacity: 0.6; pointer-events: none; }
+        .notification { animation: slideIn 0.3s ease-out; }
+        @keyframes slideIn { from { transform: translateX(100%); } to { transform: translateX(0); } }
+    </style>
+</head>
+
+<body class="bg-gray-50 min-h-screen">
+    <!-- Header dengan Appwrite Branding -->
+    <header class="bg-white shadow-sm border-b">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center py-4">
+                <div class="flex items-center space-x-4">
+                    <h1 class="text-2xl font-bold text-gray-900">Jurnal Digital 7 Kebiasaan</h1>
+                    <span class="appwrite-gradient text-white px-3 py-1 rounded-full text-sm font-semibold">
+                        Powered by Appwrite
+                    </span>
+                </div>
+                <div id="userInfo" class="hidden items-center space-x-4">
+                    <span id="currentUserName" class="text-gray-700 font-medium"></span>
+                    <button onclick="logout()" class="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg transition-colors">
+                        Logout
+                    </button>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Login Section -->
+    <div id="loginSection" class="min-h-screen flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
+        <div class="max-w-md w-full space-y-8">
+            <div class="text-center">
+                <div class="mx-auto h-20 w-20 appwrite-gradient rounded-full flex items-center justify-center mb-4">
+                    <svg class="h-10 w-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.746 0 3.332.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path>
+                    </svg>
+                </div>
+                <h2 class="text-3xl font-extrabold text-gray-900">Jurnal Digital 7 Kebiasaan</h2>
+                <p class="mt-2 text-sm text-gray-600">Anak Indonesia Hebat - Appwrite Edition</p>
+            </div>
+
+            <form id="loginForm" class="mt-8 space-y-6">
+                <div class="space-y-4">
+                    <div>
+                        <label for="email" class="block text-sm font-medium text-gray-700">Email</label>
+                        <input id="email" name="email" type="email" required 
+                               class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-pink-500 focus:border-pink-500"
+                               placeholder="Masukkan email Anda">
+                    </div>
+                    <div>
+                        <label for="password" class="block text-sm font-medium text-gray-700">Password</label>
+                        <input id="password" name="password" type="password" required 
+                               class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-pink-500 focus:border-pink-500"
+                               placeholder="Masukkan password Anda">
+                    </div>
+                    <div>
+                        <label for="role" class="block text-sm font-medium text-gray-700">Role</label>
+                        <select id="role" name="role" required 
+                                class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-pink-500 focus:border-pink-500">
+                            <option value="">Pilih Role</option>
+                            <option value="admin">Administrator</option>
+                            <option value="guru">Guru</option>
+                            <option value="siswa">Siswa</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div>
+                    <button type="submit" 
+                            class="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white appwrite-gradient hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-pink-500 transition-all">
+                        <span class="absolute left-0 inset-y-0 flex items-center pl-3">
+                            <svg class="h-5 w-5 text-pink-300 group-hover:text-pink-200" fill="currentColor" viewBox="0 0 20 20">
+                                <path fill-rule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clip-rule="evenodd"></path>
+                            </svg>
+                        </span>
+                        Masuk ke Sistem
+                    </button>
+                </div>
+
+                <div class="text-center">
+                    <p class="text-sm text-gray-600">Demo Credentials:</p>
+                    <div class="mt-2 space-y-1 text-xs text-gray-500">
+                        <p><strong>Admin:</strong> admin@jurnal.com / admin123</p>
+                        <p><strong>Guru:</strong> guru@jurnal.com / guru123</p>
+                        <p><strong>Siswa:</strong> siswa@jurnal.com / siswa123</p>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Admin Dashboard -->
+    <div id="adminDashboard" class="hidden">
+        <div class="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
+            <!-- Stats Cards -->
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+                <div class="bg-white overflow-hidden shadow rounded-lg">
+                    <div class="p-5">
+                        <div class="flex items-center">
+                            <div class="flex-shrink-0">
+                                <div class="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center">
+                                    <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path>
+                                    </svg>
+                                </div>
+                            </div>
+                            <div class="ml-5 w-0 flex-1">
+                                <dl>
+                                    <dt class="text-sm font-medium text-gray-500 truncate">Total Guru</dt>
+                                    <dd id="totalGuru" class="text-lg font-medium text-gray-900">-</dd>
+                                </dl>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-white overflow-hidden shadow rounded-lg">
+                    <div class="p-5">
+                        <div class="flex items-center">
+                            <div class="flex-shrink-0">
+                                <div class="w-8 h-8 bg-green-500 rounded-full flex items-center justify-center">
+                                    <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z"></path>
+                                    </svg>
+                                </div>
+                            </div>
+                            <div class="ml-5 w-0 flex-1">
+                                <dl>
+                                    <dt class="text-sm font-medium text-gray-500 truncate">Total Siswa</dt>
+                                    <dd id="totalSiswa" class="text-lg font-medium text-gray-900">-</dd>
+                                </dl>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-white overflow-hidden shadow rounded-lg">
+                    <div class="p-5">
+                        <div class="flex items-center">
+                            <div class="flex-shrink-0">
+                                <div class="w-8 h-8 bg-purple-500 rounded-full flex items-center justify-center">
+                                    <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.746 0 3.332.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path>
+                                    </svg>
+                                </div>
+                            </div>
+                            <div class="ml-5 w-0 flex-1">
+                                <dl>
+                                    <dt class="text-sm font-medium text-gray-500 truncate">Total Jurnal</dt>
+                                    <dd id="totalJurnal" class="text-lg font-medium text-gray-900">-</dd>
+                                </dl>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-white overflow-hidden shadow rounded-lg">
+                    <div class="p-5">
+                        <div class="flex items-center">
+                            <div class="flex-shrink-0">
+                                <div class="w-8 h-8 appwrite-gradient rounded-full flex items-center justify-center">
+                                    <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
+                                    </svg>
+                                </div>
+                            </div>
+                            <div class="ml-5 w-0 flex-1">
+                                <dl>
+                                    <dt class="text-sm font-medium text-gray-500 truncate">Hari Ini</dt>
+                                    <dd id="todayJurnal" class="text-lg font-medium text-gray-900">-</dd>
+                                </dl>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Management Tabs -->
+            <div class="bg-white shadow rounded-lg">
+                <div class="border-b border-gray-200">
+                    <nav class="-mb-px flex space-x-8" aria-label="Tabs">
+                        <button onclick="showTab('guru')" class="tab-button border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 whitespace-nowrap py-2 px-1 border-b-2 font-medium text-sm">
+                            Manajemen Guru
+                        </button>
+                        <button onclick="showTab('siswa')" class="tab-button border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 whitespace-nowrap py-2 px-1 border-b-2 font-medium text-sm">
+                            Manajemen Siswa
+                        </button>
+                        <button onclick="showTab('jurnal')" class="tab-button border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 whitespace-nowrap py-2 px-1 border-b-2 font-medium text-sm">
+                            Laporan Jurnal
+                        </button>
+                    </nav>
+                </div>
+
+                <!-- Guru Tab -->
+                <div id="guruTab" class="tab-content p-6">
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="text-lg font-medium text-gray-900">Data Guru</h3>
+                        <button onclick="showAddGuruModal()" class="appwrite-gradient text-white px-4 py-2 rounded-lg hover:opacity-90 transition-opacity">
+                            Tambah Guru
+                        </button>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="min-w-full divide-y divide-gray-200">
+                            <thead class="bg-gray-50">
+                                <tr>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nama</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Jabatan</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Jurusan</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Aksi</th>
+                                </tr>
+                            </thead>
+                            <tbody id="guruTableBody" class="bg-white divide-y divide-gray-200">
+                                <!-- Data akan dimuat di sini -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Siswa Tab -->
+                <div id="siswaTab" class="tab-content p-6 hidden">
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="text-lg font-medium text-gray-900">Data Siswa</h3>
+                        <button onclick="showAddSiswaModal()" class="appwrite-gradient text-white px-4 py-2 rounded-lg hover:opacity-90 transition-opacity">
+                            Tambah Siswa
+                        </button>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="min-w-full divide-y divide-gray-200">
+                            <thead class="bg-gray-50">
+                                <tr>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nama</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Kelas</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Jurusan</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Aksi</th>
+                                </tr>
+                            </thead>
+                            <tbody id="siswaTableBody" class="bg-white divide-y divide-gray-200">
+                                <!-- Data akan dimuat di sini -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Jurnal Tab -->
+                <div id="jurnalTab" class="tab-content p-6 hidden">
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="text-lg font-medium text-gray-900">Laporan Jurnal</h3>
+                        <div class="flex space-x-2">
+                            <button onclick="exportJurnalPDF()" class="bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600 transition-colors">
+                                Export PDF
+                            </button>
+                            <button onclick="exportJurnalExcel()" class="bg-green-500 text-white px-4 py-2 rounded-lg hover:bg-green-600 transition-colors">
+                                Export Excel
+                            </button>
+                        </div>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="min-w-full divide-y divide-gray-200">
+                            <thead class="bg-gray-50">
+                                <tr>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tanggal</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Siswa</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Kebiasaan Selesai</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Aksi</th>
+                                </tr>
+                            </thead>
+                            <tbody id="jurnalTableBody" class="bg-white divide-y divide-gray-200">
+                                <!-- Data akan dimuat di sini -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Siswa Dashboard -->
+    <div id="siswaDashboard" class="hidden">
+        <div class="max-w-4xl mx-auto py-6 sm:px-6 lg:px-8">
+            <div class="bg-white shadow rounded-lg p-6">
+                <div class="flex justify-between items-center mb-6">
+                    <div>
+                        <h2 class="text-2xl font-bold text-gray-900">Jurnal Harian Saya</h2>
+                        <p class="text-gray-600">Selamat datang, <span id="siswaName" class="font-semibold"></span></p>
+                    </div>
+                    <div class="text-right">
+                        <p class="text-sm text-gray-500">Tanggal Hari Ini</p>
+                        <p id="todayDate" class="text-lg font-semibold text-gray-900"></p>
+                    </div>
+                </div>
+
+                <!-- Form Jurnal -->
+                <form id="jurnalForm" class="space-y-6">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <!-- 7 Kebiasaan -->
+                        <div class="space-y-4">
+                            <h3 class="text-lg font-semibold text-gray-900 mb-4">7 Kebiasaan Anak Indonesia Hebat</h3>
+                            
+                            <div class="habit-card bg-gradient-to-r from-blue-50 to-blue-100 p-4 rounded-lg">
+                                <label class="block text-sm font-medium text-blue-800 mb-2">1. Berbakti kepada Orang Tua</label>
+                                <textarea id="kebiasaan1" rows="3" class="w-full px-3 py-2 border border-blue-200 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Ceritakan bagaimana Anda berbakti kepada orang tua hari ini..."></textarea>
+                            </div>
+
+                            <div class="habit-card bg-gradient-to-r from-green-50 to-green-100 p-4 rounded-lg">
+                                <label class="block text-sm font-medium text-green-800 mb-2">2. Rajin Belajar</label>
+                                <textarea id="kebiasaan2" rows="3" class="w-full px-3 py-2 border border-green-200 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500" placeholder="Apa yang Anda pelajari hari ini?"></textarea>
+                            </div>
+
+                            <div class="habit-card bg-gradient-to-r from-purple-50 to-purple-100 p-4 rounded-lg">
+                                <label class="block text-sm font-medium text-purple-800 mb-2">3. Beribadah Tepat Waktu</label>
+                                <textarea id="kebiasaan3" rows="3" class="w-full px-3 py-2 border border-purple-200 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500" placeholder="Bagaimana ibadah Anda hari ini?"></textarea>
+                            </div>
+
+                            <div class="habit-card bg-gradient-to-r from-yellow-50 to-yellow-100 p-4 rounded-lg">
+                                <label class="block text-sm font-medium text-yellow-800 mb-2">4. Hidup Bersih dan Sehat</label>
+                                <textarea id="kebiasaan4" rows="3" class="w-full px-3 py-2 border border-yellow-200 rounded-md focus:outline-none focus:ring-2 focus:ring-yellow-500" placeholder="Kegiatan hidup bersih dan sehat apa yang Anda lakukan?"></textarea>
+                            </div>
+                        </div>
+
+                        <div class="space-y-4">
+                            <div class="habit-card bg-gradient-to-r from-red-50 to-red-100 p-4 rounded-lg">
+                                <label class="block text-sm font-medium text-red-800 mb-2">5. Peduli Lingkungan</label>
+                                <textarea id="kebiasaan5" rows="3" class="w-full px-3 py-2 border border-red-200 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500" placeholder="Bagaimana Anda peduli lingkungan hari ini?"></textarea>
+                            </div>
+
+                            <div class="habit-card bg-gradient-to-r from-indigo-50 to-indigo-100 p-4 rounded-lg">
+                                <label class="block text-sm font-medium text-indigo-800 mb-2">6. Jujur dan Bertanggung Jawab</label>
+                                <textarea id="kebiasaan6" rows="3" class="w-full px-3 py-2 border border-indigo-200 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500" placeholder="Ceritakan sikap jujur dan tanggung jawab Anda hari ini..."></textarea>
+                            </div>
+
+                            <div class="habit-card bg-gradient-to-r from-pink-50 to-pink-100 p-4 rounded-lg">
+                                <label class="block text-sm font-medium text-pink-800 mb-2">7. Tolong Menolong</label>
+                                <textarea id="kebiasaan7" rows="3" class="w-full px-3 py-2 border border-pink-200 rounded-md focus:outline-none focus:ring-2 focus:ring-pink-500" placeholder="Siapa yang Anda bantu hari ini?"></textarea>
+                            </div>
+
+                            <!-- Refleksi dan Target -->
+                            <div class="bg-gradient-to-r from-gray-50 to-gray-100 p-4 rounded-lg">
+                                <label class="block text-sm font-medium text-gray-800 mb-2">Refleksi Hari Ini</label>
+                                <textarea id="refleksi" rows="3" class="w-full px-3 py-2 border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-500" placeholder="Apa yang Anda pelajari dari hari ini?"></textarea>
+                            </div>
+
+                            <div class="bg-gradient-to-r from-teal-50 to-teal-100 p-4 rounded-lg">
+                                <label class="block text-sm font-medium text-teal-800 mb-2">Target Besok</label>
+                                <textarea id="targetBesok" rows="3" class="w-full px-3 py-2 border border-teal-200 rounded-md focus:outline-none focus:ring-2 focus:ring-teal-500" placeholder="Apa yang ingin Anda capai besok?"></textarea>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="flex justify-end space-x-4">
+                        <button type="button" onclick="loadTodayJurnal()" class="bg-gray-500 text-white px-6 py-2 rounded-lg hover:bg-gray-600 transition-colors">
+                            Muat Jurnal Hari Ini
+                        </button>
+                        <button type="submit" class="appwrite-gradient text-white px-6 py-2 rounded-lg hover:opacity-90 transition-opacity">
+                            Simpan Jurnal
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Guru Dashboard -->
+    <div id="guruDashboard" class="hidden">
+        <div class="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
+            <div class="bg-white shadow rounded-lg p-6">
+                <div class="flex justify-between items-center mb-6">
+                    <div>
+                        <h2 class="text-2xl font-bold text-gray-900">Dashboard Guru</h2>
+                        <p class="text-gray-600">Selamat datang, <span id="guruName" class="font-semibold"></span></p>
+                    </div>
+                </div>
+
+                <!-- Jurnal Siswa -->
+                <div class="overflow-x-auto">
+                    <table class="min-w-full divide-y divide-gray-200">
+                        <thead class="bg-gray-50">
+                            <tr>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tanggal</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Siswa</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Kelas</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Kebiasaan Selesai</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Aksi</th>
+                            </tr>
+                        </thead>
+                        <tbody id="guruJurnalTableBody" class="bg-white divide-y divide-gray-200">
+                            <!-- Data akan dimuat di sini -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modals -->
+    <!-- Add Guru Modal -->
+    <div id="addGuruModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full hidden">
+        <div class="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
+            <div class="mt-3">
+                <h3 class="text-lg font-medium text-gray-900 mb-4">Tambah Guru Baru</h3>
+                <form id="addGuruForm" class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Nama Lengkap</label>
+                        <input type="text" id="guruNama" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-pink-500 focus:border-pink-500">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Email</label>
+                        <input type="email" id="guruEmail" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-pink-500 focus:border-pink-500">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Password</label>
+                        <input type="password" id="guruPassword" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-pink-500 focus:border-pink-500">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Jabatan</label>
+                        <input type="text" id="guruJabatan" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-pink-500 focus:border-pink-500">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Jurusan</label>
+                        <select id="guruJurusan" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-pink-500 focus:border-pink-500">
+                            <option value="">Pilih Jurusan</option>
+                            <option value="TKJ">Teknik Komputer dan Jaringan</option>
+                            <option value="RPL">Rekayasa Perangkat Lunak</option>
+                            <option value="MM">Multimedia</option>
+                            <option value="TBSM">Teknik Bisnis Sepeda Motor</option>
+                            <option value="TKR">Teknik Kendaraan Ringan</option>
+                        </select>
+                    </div>
+                    <div class="flex justify-end space-x-3 pt-4">
+                        <button type="button" onclick="closeModal('addGuruModal')" class="bg-gray-300 text-gray-700 px-4 py-2 rounded-md hover:bg-gray-400 transition-colors">
+                            Batal
+                        </button>
+                        <button type="submit" class="appwrite-gradient text-white px-4 py-2 rounded-md hover:opacity-90 transition-opacity">
+                            Simpan
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Siswa Modal -->
+    <div id="addSiswaModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full hidden">
+        <div class="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
+            <div class="mt-3">
+                <h3 class="text-lg font-medium text-gray-900 mb-4">Tambah Siswa Baru</h3>
+                <form id="addSiswaForm" class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Nama Lengkap</label>
+                        <input type="text" id="siswaNama" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-pink-500 focus:border-pink-500">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Email</label>
+                        <input type="email" id="siswaEmail" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-pink-500 focus:border-pink-500">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Password</label>
+                        <input type="password" id="siswaPassword" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-pink-500 focus:border-pink-500">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Kelas</label>
+                        <select id="siswaKelas" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-pink-500 focus:border-pink-500">
+                            <option value="">Pilih Kelas</option>
+                            <option value="X">X (Sepuluh)</option>
+                            <option value="XI">XI (Sebelas)</option>
+                            <option value="XII">XII (Dua Belas)</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Jurusan</label>
+                        <select id="siswaJurusan" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-pink-500 focus:border-pink-500">
+                            <option value="">Pilih Jurusan</option>
+                            <option value="TKJ">Teknik Komputer dan Jaringan</option>
+                            <option value="RPL">Rekayasa Perangkat Lunak</option>
+                            <option value="MM">Multimedia</option>
+                            <option value="TBSM">Teknik Bisnis Sepeda Motor</option>
+                            <option value="TKR">Teknik Kendaraan Ringan</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Agama</label>
+                        <select id="siswaAgama" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-pink-500 focus:border-pink-500">
+                            <option value="">Pilih Agama</option>
+                            <option value="Islam">Islam</option>
+                            <option value="Kristen">Kristen</option>
+                            <option value="Katolik">Katolik</option>
+                            <option value="Hindu">Hindu</option>
+                            <option value="Buddha">Buddha</option>
+                            <option value="Konghucu">Konghucu</option>
+                        </select>
+                    </div>
+                    <div class="flex justify-end space-x-3 pt-4">
+                        <button type="button" onclick="closeModal('addSiswaModal')" class="bg-gray-300 text-gray-700 px-4 py-2 rounded-md hover:bg-gray-400 transition-colors">
+                            Batal
+                        </button>
+                        <button type="submit" class="appwrite-gradient text-white px-4 py-2 rounded-md hover:opacity-90 transition-opacity">
+                            Simpan
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Appwrite Configuration Script -->
+    <script>
+        // Appwrite Configuration
+        const { Client, Account, Databases, Storage, Query, ID, Permission, Role } = Appwrite;
+
+        // Initialize Appwrite Client
+        const client = new Client()
+            .setEndpoint('https://cloud.appwrite.io/v1') // Your API Endpoint
+            .setProject('jurnal-7-kebiasaan'); // Project ID sudah diupdate
+
+        // Initialize Appwrite services
+        const account = new Account(client);
+        const databases = new Databases(client);
+        const storage = new Storage(client);
+
+        // Database and Collection IDs
+        const DATABASE_ID = 'jurnal-db';
+        const COLLECTIONS = {
+            USERS: 'users',
+            JURNAL: 'jurnal',
+            GURU: 'guru',
+            SISWA: 'siswa'
+        };
+        const BUCKET_ID = 'jurnal-files';
+
+        // Global variables
+        let currentUser = null;
+        let currentSession = null;
+
+        // Utility Functions
+        function showNotification(message, type = 'info', duration = 5000) {
+            const existingNotifications = document.querySelectorAll('.notification');
+            existingNotifications.forEach(n => n.remove());
+
+            const notification = document.createElement('div');
+            notification.className = `notification fixed top-4 right-4 px-6 py-3 rounded-lg shadow-lg z-50 ${
+                type === 'success' ? 'bg-green-500' : 
+                type === 'error' ? 'bg-red-500' : 
+                type === 'warning' ? 'bg-yellow-500' : 'bg-blue-500'
+            } text-white max-w-sm`;
+            
+            notification.innerHTML = `
+                <div class="flex items-center justify-between">
+                    <span class="text-sm font-medium">${message}</span>
+                    <button onclick="this.parentElement.parentElement.remove()" class="ml-3 text-white hover:text-gray-200">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                        </svg>
+                    </button>
+                </div>
+            `;
+            
+            document.body.appendChild(notification);
+            
+            setTimeout(() => {
+                if (notification.parentElement) {
+                    notification.style.transform = 'translateX(100%)';
+                    setTimeout(() => notification.remove(), 300);
+                }
+            }, duration);
+        }
+
+        function setLoading(element, isLoading) {
+            if (isLoading) {
+                element.classList.add('loading');
+                element.disabled = true;
+            } else {
+                element.classList.remove('loading');
+                element.disabled = false;
+            }
+        }
+
+        function showDashboard(role) {
+            // Hide all sections
+            document.getElementById('loginSection').classList.add('hidden');
+            document.getElementById('adminDashboard').classList.add('hidden');
+            document.getElementById('guruDashboard').classList.add('hidden');
+            document.getElementById('siswaDashboard').classList.add('hidden');
+            
+            // Show user info
+            document.getElementById('userInfo').classList.remove('hidden');
+            document.getElementById('userInfo').classList.add('flex');
+            document.getElementById('currentUserName').textContent = currentUser.name;
+            
+            // Show appropriate dashboard
+            if (role === 'admin') {
+                document.getElementById('adminDashboard').classList.remove('hidden');
+                loadAdminData();
+            } else if (role === 'guru') {
+                document.getElementById('guruDashboard').classList.remove('hidden');
+                document.getElementById('guruName').textContent = currentUser.name;
+                loadGuruData();
+            } else if (role === 'siswa') {
+                document.getElementById('siswaDashboard').classList.remove('hidden');
+                document.getElementById('siswaName').textContent = currentUser.name;
+                document.getElementById('todayDate').textContent = new Date().toLocaleDateString('id-ID');
+                loadSiswaData();
+            }
+        }
+
+        // Authentication Functions
+        async function login(email, password, role) {
+            try {
+                // Create session
+                const session = await account.createEmailSession(email, password);
+                currentSession = session;
+                
+                // Get user account
+                const user = await account.get();
+                
+                // Get user data from database
+                const userData = await databases.listDocuments(
+                    DATABASE_ID,
+                    COLLECTIONS.USERS,
+                    [Query.equal('userId', user.$id)]
+                );
+                
+                if (userData.documents.length === 0) {
+                    throw new Error('User data not found in database');
+                }
+                
+                const userDoc = userData.documents[0];
+                
+                // Verify role
+                if (userDoc.role !== role) {
+                    throw new Error('Invalid role for this user');
+                }
+                
+                currentUser = {
+                    id: user.$id,
+                    email: user.email,
+                    name: userDoc.nama,
+                    role: userDoc.role,
+                    ...userDoc
+                };
+                
+                return { success: true, user: currentUser };
+            } catch (error) {
+                console.error('Login error:', error);
+                throw error;
+            }
+        }
+
+        async function logout() {
+            try {
+                if (currentSession) {
+                    await account.deleteSession('current');
+                }
+                currentUser = null;
+                currentSession = null;
+                
+                // Hide all dashboards and show login
+                document.getElementById('adminDashboard').classList.add('hidden');
+                document.getElementById('guruDashboard').classList.add('hidden');
+                document.getElementById('siswaDashboard').classList.add('hidden');
+                document.getElementById('userInfo').classList.add('hidden');
+                document.getElementById('loginSection').classList.remove('hidden');
+                
+                showNotification('Logged out successfully', 'success');
+            } catch (error) {
+                console.error('Logout error:', error);
+                showNotification('Error during logout', 'error');
+            }
+        }
+
+        // Data Loading Functions
+        async function loadAdminData() {
+            try {
+                // Load statistics
+                const [guruData, siswaData, jurnalData] = await Promise.all([
+                    databases.listDocuments(DATABASE_ID, COLLECTIONS.GURU),
+                    databases.listDocuments(DATABASE_ID, COLLECTIONS.SISWA),
+                    databases.listDocuments(DATABASE_ID, COLLECTIONS.JURNAL)
+                ]);
+                
+                document.getElementById('totalGuru').textContent = guruData.total;
+                document.getElementById('totalSiswa').textContent = siswaData.total;
+                document.getElementById('totalJurnal').textContent = jurnalData.total;
+                
+                // Today's journal count
+                const today = new Date().toISOString().split('T')[0];
+                const todayJurnal = await databases.listDocuments(
+                    DATABASE_ID,
+                    COLLECTIONS.JURNAL,
+                    [Query.equal('tanggal', today)]
+                );
+                document.getElementById('todayJurnal').textContent = todayJurnal.total;
+                
+                // Load initial tab data
+                loadGuruTable();
+            } catch (error) {
+                console.error('Error loading admin data:', error);
+                showNotification('Error loading dashboard data', 'error');
+            }
+        }
+
+        async function loadGuruTable() {
+            try {
+                const guruData = await databases.listDocuments(DATABASE_ID, COLLECTIONS.GURU);
+                const tbody = document.getElementById('guruTableBody');
+                tbody.innerHTML = '';
+                
+                guruData.documents.forEach(guru => {
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">${guru.nama}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${guru.email || '-'}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${guru.jabatan}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${guru.jurusan}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                            <button onclick="editGuru('${guru.$id}')" class="text-indigo-600 hover:text-indigo-900 mr-3">Edit</button>
+                            <button onclick="deleteGuru('${guru.$id}')" class="text-red-600 hover:text-red-900">Delete</button>
+                        </td>
+                    `;
+                    tbody.appendChild(row);
+                });
+            } catch (error) {
+                console.error('Error loading guru table:', error);
+                showNotification('Error loading guru data', 'error');
+            }
+        }
+
+        async function loadSiswaTable() {
+            try {
+                const siswaData = await databases.listDocuments(DATABASE_ID, COLLECTIONS.SISWA);
+                const tbody = document.getElementById('siswaTableBody');
+                tbody.innerHTML = '';
+                
+                siswaData.documents.forEach(siswa => {
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">${siswa.nama}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${siswa.email || '-'}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${siswa.kelas}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${siswa.jurusan}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                            <button onclick="editSiswa('${siswa.$id}')" class="text-indigo-600 hover:text-indigo-900 mr-3">Edit</button>
+                            <button onclick="deleteSiswa('${siswa.$id}')" class="text-red-600 hover:text-red-900">Delete</button>
+                        </td>
+                    `;
+                    tbody.appendChild(row);
+                });
+            } catch (error) {
+                console.error('Error loading siswa table:', error);
+                showNotification('Error loading siswa data', 'error');
+            }
+        }
+
+        async function loadJurnalTable() {
+            try {
+                const jurnalData = await databases.listDocuments(
+                    DATABASE_ID, 
+                    COLLECTIONS.JURNAL,
+                    [Query.orderDesc('tanggal'), Query.limit(50)]
+                );
+                const tbody = document.getElementById('jurnalTableBody');
+                tbody.innerHTML = '';
+                
+                jurnalData.documents.forEach(jurnal => {
+                    const completedHabits = [
+                        jurnal.kebiasaan1, jurnal.kebiasaan2, jurnal.kebiasaan3,
+                        jurnal.kebiasaan4, jurnal.kebiasaan5, jurnal.kebiasaan6, jurnal.kebiasaan7
+                    ].filter(habit => habit && habit.trim() !== '').length;
+                    
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${new Date(jurnal.tanggal).toLocaleDateString('id-ID')}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${jurnal.userName}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${completedHabits}/7</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                            <button onclick="viewJurnal('${jurnal.$id}')" class="text-indigo-600 hover:text-indigo-900">View</button>
+                        </td>
+                    `;
+                    tbody.appendChild(row);
+                });
+            } catch (error) {
+                console.error('Error loading jurnal table:', error);
+                showNotification('Error loading jurnal data', 'error');
+            }
+        }
+
+        async function loadGuruData() {
+            // Load jurnal data for guru dashboard
+            loadJurnalTable();
+        }
+
+        async function loadSiswaData() {
+            // Load today's journal if exists
+            loadTodayJurnal();
+        }
+
+        async function loadTodayJurnal() {
+            try {
+                const today = new Date().toISOString().split('T')[0];
+                const jurnalData = await databases.listDocuments(
+                    DATABASE_ID,
+                    COLLECTIONS.JURNAL,
+                    [
+                        Query.equal('userId', currentUser.id),
+                        Query.equal('tanggal', today)
+                    ]
+                );
+                
+                if (jurnalData.documents.length > 0) {
+                    const jurnal = jurnalData.documents[0];
+                    
+                    // Fill form with existing data
+                    document.getElementById('kebiasaan1').value = jurnal.kebiasaan1 || '';
+                    document.getElementById('kebiasaan2').value = jurnal.kebiasaan2 || '';
+                    document.getElementById('kebiasaan3').value = jurnal.kebiasaan3 || '';
+                    document.getElementById('kebiasaan4').value = jurnal.kebiasaan4 || '';
+                    document.getElementById('kebiasaan5').value = jurnal.kebiasaan5 || '';
+                    document.getElementById('kebiasaan6').value = jurnal.kebiasaan6 || '';
+                    document.getElementById('kebiasaan7').value = jurnal.kebiasaan7 || '';
+                    document.getElementById('refleksi').value = jurnal.refleksi || '';
+                    document.getElementById('targetBesok').value = jurnal.targetBesok || '';
+                    
+                    showNotification('Jurnal hari ini berhasil dimuat', 'success');
+                } else {
+                    showNotification('Belum ada jurnal untuk hari ini', 'info');
+                }
+            } catch (error) {
+                console.error('Error loading today journal:', error);
+                showNotification('Error loading today journal', 'error');
+            }
+        }
+
+        // UI Functions
+        function showTab(tabName) {
+            // Hide all tabs
+            document.querySelectorAll('.tab-content').forEach(tab => {
+                tab.classList.add('hidden');
+            });
+            
+            // Remove active class from all buttons
+            document.querySelectorAll('.tab-button').forEach(btn => {
+                btn.classList.remove('border-pink-500', 'text-pink-600');
+                btn.classList.add('border-transparent', 'text-gray-500');
+            });
+            
+            // Show selected tab
+            document.getElementById(tabName + 'Tab').classList.remove('hidden');
+            
+            // Add active class to selected button
+            event.target.classList.remove('border-transparent', 'text-gray-500');
+            event.target.classList.add('border-pink-500', 'text-pink-600');
+            
+            // Load data for the tab
+            if (tabName === 'guru') {
+                loadGuruTable();
+            } else if (tabName === 'siswa') {
+                loadSiswaTable();
+            } else if (tabName === 'jurnal') {
+                loadJurnalTable();
+            }
+        }
+
+        function showAddGuruModal() {
+            document.getElementById('addGuruModal').classList.remove('hidden');
+        }
+
+        function showAddSiswaModal() {
+            document.getElementById('addSiswaModal').classList.remove('hidden');
+        }
+
+        function closeModal(modalId) {
+            document.getElementById(modalId).classList.add('hidden');
+        }
+
+        // CRUD Functions
+        async function createGuru(guruData) {
+            try {
+                // Create user account
+                const user = await account.create(
+                    ID.unique(),
+                    guruData.email,
+                    guruData.password,
+                    guruData.nama
+                );
+                
+                // Create user document
+                await databases.createDocument(
+                    DATABASE_ID,
+                    COLLECTIONS.USERS,
+                    ID.unique(),
+                    {
+                        userId: user.$id,
+                        username: guruData.email,
+                        role: 'guru',
+                        nama: guruData.nama,
+                        jurusan: guruData.jurusan,
+                        jabatan: guruData.jabatan,
+                        isActive: true
+                    }
+                );
+                
+                // Create guru document
+                await databases.createDocument(
+                    DATABASE_ID,
+                    COLLECTIONS.GURU,
+                    ID.unique(),
+                    {
+                        userId: user.$id,
+                        nama: guruData.nama,
+                        email: guruData.email,
+                        jabatan: guruData.jabatan,
+                        jurusan: guruData.jurusan
+                    }
+                );
+                
+                showNotification('Guru berhasil ditambahkan', 'success');
+                closeModal('addGuruModal');
+                loadGuruTable();
+                loadAdminData(); // Refresh stats
+            } catch (error) {
+                console.error('Error creating guru:', error);
+                showNotification('Error creating guru: ' + error.message, 'error');
+            }
+        }
+
+        async function createSiswa(siswaData) {
+            try {
+                // Create user account
+                const user = await account.create(
+                    ID.unique(),
+                    siswaData.email,
+                    siswaData.password,
+                    siswaData.nama
+                );
+                
+                // Create user document
+                await databases.createDocument(
+                    DATABASE_ID,
+                    COLLECTIONS.USERS,
+                    ID.unique(),
+                    {
+                        userId: user.$id,
+                        username: siswaData.email,
+                        role: 'siswa',
+                        nama: siswaData.nama,
+                        kelas: siswaData.kelas,
+                        jurusan: siswaData.jurusan,
+                        agama: siswaData.agama,
+                        isActive: true
+                    }
+                );
+                
+                // Create siswa document
+                await databases.createDocument(
+                    DATABASE_ID,
+                    COLLECTIONS.SISWA,
+                    ID.unique(),
+                    {
+                        userId: user.$id,
+                        nama: siswaData.nama,
+                        email: siswaData.email,
+                        kelas: siswaData.kelas,
+                        jurusan: siswaData.jurusan,
+                        agama: siswaData.agama
+                    }
+                );
+                
+                showNotification('Siswa berhasil ditambahkan', 'success');
+                closeModal('addSiswaModal');
+                loadSiswaTable();
+                loadAdminData(); // Refresh stats
+            } catch (error) {
+                console.error('Error creating siswa:', error);
+                showNotification('Error creating siswa: ' + error.message, 'error');
+            }
+        }
+
+        async function saveJurnal(jurnalData) {
+            try {
+                const today = new Date().toISOString().split('T')[0];
+                
+                // Check if journal exists for today
+                const existingJurnal = await databases.listDocuments(
+                    DATABASE_ID,
+                    COLLECTIONS.JURNAL,
+                    [
+                        Query.equal('userId', currentUser.id),
+                        Query.equal('tanggal', today)
+                    ]
+                );
+                
+                const data = {
+                    userId: currentUser.id,
+                    userName: currentUser.name,
+                    tanggal: today,
+                    ...jurnalData
+                };
+                
+                if (existingJurnal.documents.length > 0) {
+                    // Update existing journal
+                    await databases.updateDocument(
+                        DATABASE_ID,
+                        COLLECTIONS.JURNAL,
+                        existingJurnal.documents[0].$id,
+                        data
+                    );
+                    showNotification('Jurnal berhasil diperbarui', 'success');
+                } else {
+                    // Create new journal
+                    await databases.createDocument(
+                        DATABASE_ID,
+                        COLLECTIONS.JURNAL,
+                        ID.unique(),
+                        data
+                    );
+                    showNotification('Jurnal berhasil disimpan', 'success');
+                }
+            } catch (error) {
+                console.error('Error saving jurnal:', error);
+                showNotification('Error saving jurnal: ' + error.message, 'error');
+            }
+        }
+
+        // Export Functions
+        function exportJurnalPDF() {
+            showNotification('Export PDF feature coming soon!', 'info');
+        }
+
+        function exportJurnalExcel() {
+            showNotification('Export Excel feature coming soon!', 'info');
+        }
+
+        // Event Listeners
+        document.addEventListener('DOMContentLoaded', async function() {
+            console.log('Appwrite Jurnal App initialized with Project ID: jurnal-7-kebiasaan');
+            
+            // Check if user is already logged in
+            try {
+                const user = await account.get();
+                if (user) {
+                    // User is logged in, get user data
+                    const userData = await databases.listDocuments(
+                        DATABASE_ID,
+                        COLLECTIONS.USERS,
+                        [Query.equal('userId', user.$id)]
+                    );
+                    
+                    if (userData.documents.length > 0) {
+                        const userDoc = userData.documents[0];
+                        currentUser = {
+                            id: user.$id,
+                            email: user.email,
+                            name: userDoc.nama,
+                            role: userDoc.role,
+                            ...userDoc
+                        };
+                        
+                        showDashboard(currentUser.role);
+                    }
+                }
+            } catch (error) {
+                // User not logged in, show login form
+                console.log('User not logged in');
+            }
+        });
+
+        // Login form handler
+        document.getElementById('loginForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            const role = document.getElementById('role').value;
+            const submitBtn = this.querySelector('button[type="submit"]');
+            
+            setLoading(submitBtn, true);
+            
+            try {
+                const result = await login(email, password, role);
+                if (result.success) {
+                    showNotification(`Welcome, ${result.user.name}!`, 'success');
+                    showDashboard(result.user.role);
+                }
+            } catch (error) {
+                showNotification('Login failed: ' + error.message, 'error');
+            } finally {
+                setLoading(submitBtn, false);
+            }
+        });
+
+        // Add Guru form handler
+        document.getElementById('addGuruForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const guruData = {
+                nama: document.getElementById('guruNama').value,
+                email: document.getElementById('guruEmail').value,
+                password: document.getElementById('guruPassword').value,
+                jabatan: document.getElementById('guruJabatan').value,
+                jurusan: document.getElementById('guruJurusan').value
+            };
+            
+            const submitBtn = this.querySelector('button[type="submit"]');
+            setLoading(submitBtn, true);
+            
+            try {
+                await createGuru(guruData);
+                this.reset();
+            } catch (error) {
+                // Error already handled in createGuru
+            } finally {
+                setLoading(submitBtn, false);
+            }
+        });
+
+        // Add Siswa form handler
+        document.getElementById('addSiswaForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const siswaData = {
+                nama: document.getElementById('siswaNama').value,
+                email: document.getElementById('siswaEmail').value,
+                password: document.getElementById('siswaPassword').value,
+                kelas: document.getElementById('siswaKelas').value,
+                jurusan: document.getElementById('siswaJurusan').value,
+                agama: document.getElementById('siswaAgama').value
+            };
+            
+            const submitBtn = this.querySelector('button[type="submit"]');
+            setLoading(submitBtn, true);
+            
+            try {
+                await createSiswa(siswaData);
+                this.reset();
+            } catch (error) {
+                // Error already handled in createSiswa
+            } finally {
+                setLoading(submitBtn, false);
+            }
+        });
+
+        // Jurnal form handler
+        document.getElementById('jurnalForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const jurnalData = {
+                kebiasaan1: document.getElementById('kebiasaan1').value,
+                kebiasaan2: document.getElementById('kebiasaan2').value,
+                kebiasaan3: document.getElementById('kebiasaan3').value,
+                kebiasaan4: document.getElementById('kebiasaan4').value,
+                kebiasaan5: document.getElementById('kebiasaan5').value,
+                kebiasaan6: document.getElementById('kebiasaan6').value,
+                kebiasaan7: document.getElementById('kebiasaan7').value,
+                refleksi: document.getElementById('refleksi').value,
+                targetBesok: document.getElementById('targetBesok').value
+            };
+            
+            const submitBtn = this.querySelector('button[type="submit"]');
+            setLoading(submitBtn, true);
+            
+            try {
+                await saveJurnal(jurnalData);
+            } catch (error) {
+                // Error already handled in saveJurnal
+            } finally {
+                setLoading(submitBtn, false);
+            }
+        });
+
+        // Initialize first tab as active
+        setTimeout(() => {
+            const firstTabButton = document.querySelector('.tab-button');
+            if (firstTabButton) {
+                firstTabButton.click();
+            }
+        }, 100);
+
+        console.log('✅ Appwrite integration loaded successfully with Project ID: jurnal-7-kebiasaan');
+    </script>
+<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'98487cd8d29f81d8',t:'MTc1ODc4MTk4MS4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+</html>
